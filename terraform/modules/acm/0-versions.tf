@@ -7,10 +7,15 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5"
     }
-    
+
     aws = {
       source  = "hashicorp/aws"
       version = "~> 4.62"
     }
   }
+}
+
+provider "aws" {
+  alias  = "useast1"
+  region = "us-east-1"
 }

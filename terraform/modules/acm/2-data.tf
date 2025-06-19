@@ -6,6 +6,6 @@ data "cloudflare_zone" "this" {
 }
 
 data "aws_route53_zone" "this" {
-  count = var.create_certificate && local.use_route53 ? 1 : 0 
-  name = var.zone_name
+  count = var.create_certificate && local.use_route53 ? 1 : 0
+  name  = var.zone_name
 }
