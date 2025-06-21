@@ -168,14 +168,14 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "base_ref=origin/${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
           else
-            echo "base_ref=HEAD^" >> "$GITHUB_OUTPUT"
+            echo "base_ref=''" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Fetch base branch (only needed for PRs)
         if: steps.vars.outputs.event_name == 'pull_request'
         run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
 
-      - name: Check for changes
+      - name: Check for changes based on base branch
         id: filter
         uses: dorny/paths-filter@v3
         with:
