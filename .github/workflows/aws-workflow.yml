@@ -236,11 +236,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y trivy
 
-      - name: Install Gitleaks
-        run: |
-          curl -sL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_$(uname -s)_$(uname -m).tar.gz | tar xz
-          sudo mv gitleaks /usr/local/bin/
-
       - name: Install Checkov
         run: pip install checkov
 
@@ -257,6 +252,9 @@ jobs:
           path: terraform/pre-commit-report
           retention-days: 1
         continue-on-error: true
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2.3.9
 
   web_build:
     name: Web Build
