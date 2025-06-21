@@ -55,7 +55,7 @@ env:
   working_dir_web: "web"
   tf_plugin_cache_dir: ${{ github.workspace }}/.terraform.d/plugin-cache
   terraform_approvers: '["terraform-approvers"]'
-  auto_apply: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.auto_apply == 'true' || github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging') }}
+  auto_apply: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.auto_apply == 'true') || (github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging')) }}
 
   # verbosity setting for Terraform logs
   TF_LOG: INFO
@@ -150,7 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [compute_env]
     outputs:
-      environment: ${{ needs.detect_changes.outputs.environment }}
+      environment: ${{ needs.compute_env.outputs.environment }}
       run_tf: ${{ steps.set-job-conditions.outputs.run_tf }}
       run_web: ${{ steps.set-job-conditions.outputs.run_web }}
       deploy_tf: ${{ steps.set-job-conditions.outputs.deploy_tf }}
@@ -174,11 +174,11 @@ jobs:
 
       - name: set-job-conditions
         run: |
-          RUN_TF = ${{github.event_name == 'workflow_dispatch'}} || steps.filter.outputs.terraform == 'true'
-          DEPLOY_TF = $RUN_TF && ${{needs.compute_env.tf_apply == 'true'}}
+          RUN_TF=${{github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true'}}
+          DEPLOY_TF=$(RUN_TF && ${{needs.compute_env.tf_apply == 'true'}})
 
-          RUN_WEB = ${{ steps.filter.outputs.web }} == true
-          DEPLOY_WEB = $RUN_WEB && ${{needs.compute_env.branch_filter_valid == 'true'}}
+          RUN_WEB=${{ steps.filter.outputs.web == true }}
+          DEPLOY_WEB=$(RUN_WEB && ${{needs.compute_env.branch_filter_valid == 'true'}})
 
           echo "run_tf=$RUN_TF" >> $GITHUB_OUTPUT
           echo "run_web=$RUN_WEB" >> $GITHUB_OUTPUT
@@ -220,7 +220,7 @@ jobs:
       - name: Terraform Workspace (defaults to 'prod')
         run: |
           cd ${{ env.working_dir_tf }}
-          terraform workspace select ${{ needs.detect_changes.outputs.environment }} || terraform workspace new ${{ needs.detect_changes.outputs.environment }}
+          terraform workspace select '${{ needs.detect_changes.outputs.environment }}' || terraform workspace new '${{ needs.detect_changes.outputs.environment }}'
 
       - uses: actions/setup-python@v3
       - name: Run pre-commit hooks in terraform directory
@@ -318,7 +318,7 @@ jobs:
       - name: Terraform Workspace
         run: |
           cd ${{ env.working_dir_tf }}
-          terraform workspace select ${{ needs.detect_changes.outputs.environment }} || terraform workspace new ${{ needs.detect_changes.outputs.environment }}
+          terraform workspace select '${{ needs.detect_changes.outputs.environment }}' || terraform workspace new '${{ needs.detect_changes.outputs.environment }}'
 
       - name: Terraform Plan
         env:
@@ -515,7 +515,7 @@ jobs:
         run: |
           cd ${{ env.working_dir_tf }}
           echo "Using environment: ${{ needs.detect_changes.outputs.environment }}"
-          terraform workspace select ${{ needs.detect_changes.outputs.environment }} || terraform workspace new ${{ needs.detect_changes.outputs.environment }}
+          terraform workspace select '${{ needs.detect_changes.outputs.environment }}' || terraform workspace new '${{ needs.detect_changes.outputs.environment }}'
 
       - name: Terraform Apply
         env:
