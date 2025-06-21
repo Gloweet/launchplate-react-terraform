@@ -375,7 +375,7 @@ jobs:
             const org = context.repo.owner;
 
             // Array of team slugs without org prefix
-            const teamsRaw = approversEnv.split(',').map(t => t.trim()).filter(Boolean);
+            const teamsRaw = approversEnv.map(t => t.trim()).filter(Boolean);
 
             // Add org prefix to get full team slugs
             const teams = teamsRaw.map(team => team.includes('/') ? team : `${org}/${team}`);
@@ -470,7 +470,7 @@ jobs:
             const org = context.repo.owner;
 
             // Array of team slugs without org prefix
-            const teamsRaw = approversEnv.split(',').map(t => t.trim()).filter(Boolean);
+            const teamsRaw = approversEnv.map(t => t.trim()).filter(Boolean);
 
             // Add org prefix to get full team slugs
             const teams = teamsRaw.map(team => team.includes('/') ? team : `${org}/${team}`);
