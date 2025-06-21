@@ -609,7 +609,7 @@ jobs:
         if: env.WORKFLOW_CONCLUSION != 'skipped' && env.WORKFLOW_CONCLUSION != 'cancelled'
         with:
           status: custom
-          fields: workflow,commit,repo,ref,author,took
+          fields: workflow,job,commit,repo,ref,author,took
           custom_payload: |
             {
               attachments: [{
