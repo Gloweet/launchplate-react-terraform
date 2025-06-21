@@ -45,7 +45,7 @@ on:
       - "release/*"
       - "feature/*"
       - "bugfix/*"
-    types: [opened, reopened]
+    types: [opened, synchronize, reopened]
   issue_comment:
     types: [created]
 env:
@@ -66,12 +66,7 @@ env:
           github.ref_name == 'main' && 'prod' ||
           github.ref_name == 'staging' && 'stg' ||
           github.ref_name == 'development' && 'dev'
-        ) ||
-        github.event_name == 'pull_request_target' && (
-          github.event.pull_request.base.ref == 'main' && 'prod' ||
-          github.event.pull_request.base.ref == 'staging' && 'stg' ||
-          github.event.pull_request.base.ref == 'development' && 'dev'
-        ) }}
+        )}}
   tf_version: "1.12.1"
   working_dir_tf: "terraform/live"
   working_dir_web: "web"
@@ -90,37 +85,9 @@ jobs:
       - name: Dump GitHub context
         run: echo "${{ toJSON(github) }}"
 
-  # This job runs when a PR comment with /retry is added
-  retry_pipeline:
-    name: Retry CI/CD Pipeline
-    runs-on: ubuntu-latest
-    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '/retry'
-    steps:
-      - name: Acknowledge retry request
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const commenter = context.payload.comment.user.login;
-
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🔄 CI/CD pipeline retry requested by @${commenter}. Running checks and plan again...`
-            });
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
   detect_changes:
     name: Detect Changes
     runs-on: ubuntu-latest
-    needs: [retry_pipeline]
-    if: always() && (needs.retry_pipeline.result == 'success' || needs.retry_pipeline.result == 'skipped')
     outputs:
       terraform_changes: ${{ steps.filter.outputs.terraform }}
       web_changes: ${{ steps.filter.outputs.web }}
@@ -173,17 +140,16 @@ jobs:
           cd ${{ env.working_dir_tf }}
           terraform init
 
-      - name: Terraform Workspace
-        if: env.environment != '' && env.environment != 'false' && env.environment != null
+      - name: Terraform Workspace (defaults to 'prod')
         run: |
           cd ${{ env.working_dir_tf }}
-          terraform workspace select ${{ env.environment }} || terraform workspace new ${{ env.environment }}
+          terraform workspace select ${{ env.environment || 'prod' }} || terraform workspace new ${{ env.environment || 'prod' }}
 
-      - name: Terraform Validate
-        if: env.environment != '' && env.environment != 'false'
-        run: |
-          cd ${{ env.working_dir_tf }}
-          terraform validate
+      - uses: actions/setup-python@v3
+      - name: Run pre-commit hooks in terraform directory
+        uses: pre-commit/action@v3.0.1
+        with:
+          working-directory: ${{ env.working_dir_tf }}
 
   web_build:
     name: Web Build
@@ -230,8 +196,8 @@ jobs:
           echo "app_version=$APP_VERSION" >> $GITHUB_OUTPUT
           echo "App Version: $APP_VERSION"
 
-      - name: Build project
-        run: cd ${{ env.working_dir_web }} && npm run build:${{ env.environment }}
+      - name: Build project (defaults to prod config)
+        run: cd ${{ env.working_dir_web }} && npm run build:${{ env.environment || 'prod' }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -243,7 +209,7 @@ jobs:
   tf_plan:
     name: TF Plan
     needs: [tf_checks]
-    if: env.environment != '' && env.environment != 'false' && env.environment != null
+    if: env.environment != false
     runs-on: ubuntu-latest
 
     steps:
@@ -323,10 +289,8 @@ jobs:
 
             Please review the plan and comment:
             - \`/apply\` to apply these changes (only members of the \`${teamNames}\` team(s) can approve)
-            - \`/retry\` to run the CI/CD pipeline again (without applying changes)
 
-            **Notes:** Only members of the \`${teamNames}\` team(s) can approve and trigger the apply.
-            **Note:** The retry option is useful if you've made changes to your PR and want to see an updated plan.`;
+            **Notes:** Only members of the \`${teamNames}\` team(s) can approve and trigger the apply.`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -335,7 +299,8 @@ jobs:
               body: body
             });
 
-      # For workflow_dispatch with manual approval, we'll use a different approach
+      # When manual approval is required (on workflow_dispatch and push):
+      # Create an annotation to notify the user on the TF plan and how to apply it
       - name: Generate Terraform Plan Output
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.auto_apply == 'false' || github.event_name == 'push'
         run: |
@@ -375,10 +340,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: [tf_plan]
     if: |
-      env.environment != '' && env.environment != 'false' && env.environment != null &&
+      env.environment != false &&
       ((github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '/apply') ||
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.auto_apply == 'true') ||
-      (github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging')))
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.auto_apply == 'true'))
 
     steps:
       - name: Check commenter team membership
