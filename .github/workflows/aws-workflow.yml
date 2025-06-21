@@ -266,6 +266,8 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const teams = JSON.parse(process.env.TERRAFORM_APPROVERS)
+            const teamNames = teams.map(team => `@${team.name}`).join(', ');
             const planOutput = process.env.PLAN_OUTPUT || '';
             let planSummary = "Plan: unknown";
             if (planOutput) {
@@ -286,7 +288,7 @@ jobs:
 
             Please review the plan and comment \`/apply\` to apply these changes.
 
-            **Note:** Only members of the \`terraform-approvers\` team can approve and trigger the apply.`;
+            **Note:** Only members of the \`${teamNames}\` team(s) can approve and trigger the apply.`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
