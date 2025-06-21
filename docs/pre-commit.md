@@ -32,6 +32,7 @@ python -m pip install --upgrade pip
 ```ps1
 choco install tflint -y
 choco install trivy -y
+choco install gitleaks -y
 python -m pip install checkov
 ```
 
@@ -50,6 +51,7 @@ Either use **Devbox**, either do the following steps:
 brew install pre-commit
 brew install tflint
 brew install trivy
+brew install gitleaks
 brew install checkov
 ```
 
