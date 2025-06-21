@@ -62,9 +62,16 @@ env:
           github.event.pull_request.base.ref == 'staging' && 'stg' ||
           github.event.pull_request.base.ref == 'development' && 'dev'
         ) ||
-        github.ref_name == 'main' && 'prod' ||
-        github.ref_name == 'staging' && 'stg' ||
-        github.ref_name == 'development' && 'dev' }}
+        github.event_name == 'push' && (
+          github.ref_name == 'main' && 'prod' ||
+          github.ref_name == 'staging' && 'stg' ||
+          github.ref_name == 'development' && 'dev'
+        ) ||
+        github.event_name == 'pull_request_target' && (
+          github.event.pull_request.base.ref == 'main' && 'prod' ||
+          github.event.pull_request.base.ref == 'staging' && 'stg' ||
+          github.event.pull_request.base.ref == 'development' && 'dev'
+        ) }}
   tf_version: "1.12.1"
   working_dir_tf: "terraform/live"
   working_dir_web: "web"
