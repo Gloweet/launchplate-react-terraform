@@ -85,54 +85,56 @@ jobs:
           TF_APPLY="false"
           BRANCH_FILTER_VALID="false"
 
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            ENVIRONMENT="${{ github.event.inputs.environment }}"
+          EVENT_NAME="${{ github.event_name }}"
+          REF_NAME="${{ github.ref_name }}"
+          COMMENT_BODY="${{ github.event.comment.body }}"
+          EVENT_INPUT_ENV="${{ github.event.inputs.environment }}"
+          EVENT_INPUT_APPLY="${{ github.event.inputs.tf_apply }}"
+          PR_BASE_REF="${{ github.event.pull_request.base.ref }}"
+
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            ENVIRONMENT="$EVENT_INPUT_ENV"
             BRANCH_FILTER_VALID="true"
-            if [[ "${{ github.event.inputs.tf_apply }}" == "true" ]]; then
+            if [[ "$EVENT_INPUT_APPLY" == "true" ]]; then
               TF_APPLY="true"
             fi
 
-          elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
-            if [[ "${{ github.ref_name }}" == "main" ]]; then
+          elif [[ "$EVENT_NAME" == "issue_comment" ]]; then
+            if [[ "$REF_NAME" == "main" ]]; then
               ENVIRONMENT="prod"
               BRANCH_FILTER_VALID="true"
-            elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+            elif [[ "$REF_NAME" == "staging" ]]; then
               ENVIRONMENT="stg"
               BRANCH_FILTER_VALID="true"
-            elif [[ "${{ github.ref_name }}" == "development" ]]; then
+            elif [[ "$REF_NAME" == "development" ]]; then
               ENVIRONMENT="dev"
               BRANCH_FILTER_VALID="true"
             fi
 
-            if [[ $BRANCH_FILTER_VALID == "true" && ${{github.event.comment.body == "apply" }} ]]; then
+            if [[ "$BRANCH_FILTER_VALID" == "true" && "$COMMENT_BODY" == "apply" ]]; then
               TF_APPLY="true"
             fi
 
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_REF="${{ github.event.pull_request.base.ref }}"
-            if [[ "$BASE_REF" == "main" ]]; then
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if [[ "$PR_BASE_REF" == "main" ]]; then
               ENVIRONMENT="prod"
               BRANCH_FILTER_VALID="true"
-            elif [[ "$BASE_REF" == "staging" ]]; then
+            elif [[ "$PR_BASE_REF" == "staging" ]]; then
               ENVIRONMENT="stg"
               BRANCH_FILTER_VALID="true"
-            elif [[ "$BASE_REF" == "development" ]]; then
+            elif [[ "$PR_BASE_REF" == "development" ]]; then
               ENVIRONMENT="dev"
               BRANCH_FILTER_VALID="true"
             fi
 
-            if [[ $BRANCH_FILTER_VALID == "true" && ${{github.event.comment.body == "apply" }} ]]; then
-              TF_APPLY="true"
-            fi
-
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            if [[ "${{ github.ref_name }}" == "main" ]]; then
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            if [[ "$REF_NAME" == "main" ]]; then
               ENVIRONMENT="prod"
               BRANCH_FILTER_VALID="true"
-            elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+            elif [[ "$REF_NAME" == "staging" ]]; then
               ENVIRONMENT="stg"
               BRANCH_FILTER_VALID="true"
-            elif [[ "${{ github.ref_name }}" == "development" ]]; then
+            elif [[ "$REF_NAME" == "development" ]]; then
               ENVIRONMENT="dev"
               BRANCH_FILTER_VALID="true"
             fi
@@ -140,7 +142,7 @@ jobs:
 
           echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
           echo "tf_apply=$TF_APPLY" >> $GITHUB_OUTPUT
-          echo "branch_filter_valid=$BRANCH_FILTER_VALID"
+          echo "branch_filter_valid=$BRANCH_FILTER_VALID" >> $GITHUB_OUTPUT
 
   detect_changes:
     name: Detect Changes
