@@ -220,10 +220,14 @@ jobs:
           terraform workspace select '${{ needs.detect_changes.outputs.environment }}' || terraform workspace new '${{ needs.detect_changes.outputs.environment }}'
 
       - uses: actions/setup-python@v3
-      - name: Run pre-commit hooks in terraform directory
-        uses: pre-commit/action@v3.0.1
-        with:
-          working-directory: "terraform"
+
+      - name: Install pre-commit
+        run: pip install pre-commit
+
+      - name: Run pre-commit in terraform directory
+        run: pre-commit run --show-diff-on-failure --color=always --all-files
+        working-directory: terraform
+
       - name: Upload pre-commit reports
         uses: actions/upload-artifact@v4
         with:
