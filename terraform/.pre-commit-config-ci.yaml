@@ -1,0 +1,54 @@
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.99.4
+    hooks:
+      - id: terraform_fmt
+        args:
+          - --args=-write=true
+          - --args=-recursive
+      - id: terraform_tflint
+      - id: terraform_validate
+      - id: terraform_checkov
+        args:
+          - --args=--quiet
+      - id: terraform_trivy
+        args:
+          - --args=--skip-dirs="**/.terragrunt-cache"
+      - id: infracost_breakdown
+        args:
+          - --args=--path=terraform/live/
+          - --args=--terraform-workspace=prod
+          - --args=--show-skipped
+          - --args=--format=table
+          - --hook-config='.totalHourlyCost|tonumber < 0.1'
+          - --hook-config='.totalHourlyCost|tonumber < 1'
+          - --hook-config='.projects[].diff.totalMonthlyCost|tonumber != 10000'
+          - --hook-config='.currency == "EUR"'
+      - id: infracost_breakdown
+        args:
+          - --args=--path=terraform/live/
+          - --args=--terraform-workspace=prod
+          - --args=--show-skipped
+          - --args=--format=json
+          - --args=--out-file=terraform/pre-commit-report/infracost_breakdown_prod.json
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: detect-private-key
+      - id: detect-aws-credentials
+        args:
+          - --allow-missing-credentials
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.27.2
+    hooks:
+      - id: gitleaks
+        args:
+          - .
+          - --report-format=json
+          - --report-path=terraform/pre-commit-report/gitleaks-report.json
+          - --no-color
+          - --no-banner
+          - --config=terraform/.gitleaks.toml
