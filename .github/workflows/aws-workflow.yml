@@ -45,9 +45,9 @@ on:
       - "release/*"
       - "feature/*"
       - "bugfix/*"
+    types: [opened, reopened]
   issue_comment:
     types: [created]
-
 env:
   aws_region: eu-west-3
   environment: >-
@@ -90,9 +90,37 @@ jobs:
       - name: Dump GitHub context
         run: echo "${{ toJSON(github) }}"
 
+  # This job runs when a PR comment with /retry is added
+  retry_pipeline:
+    name: Retry CI/CD Pipeline
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.body == '/retry'
+    steps:
+      - name: Acknowledge retry request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commenter = context.payload.comment.user.login;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `🔄 CI/CD pipeline retry requested by @${commenter}. Running checks and plan again...`
+            });
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
   detect_changes:
     name: Detect Changes
     runs-on: ubuntu-latest
+    needs: [retry_pipeline]
+    if: always() && (needs.retry_pipeline.result == 'success' || needs.retry_pipeline.result == 'skipped')
     outputs:
       terraform_changes: ${{ steps.filter.outputs.terraform }}
       web_changes: ${{ steps.filter.outputs.web }}
@@ -158,7 +186,7 @@ jobs:
           terraform validate
 
   web_build:
-    name: Web Lint, Test & Build
+    name: Web Build
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch' || needs.detect_changes.outputs.web_changes == 'true'
     needs: [detect_changes]
@@ -293,9 +321,12 @@ jobs:
             \`\`\`
             </details>
 
-            Please review the plan and comment \`/apply\` to apply these changes.
+            Please review the plan and comment:
+            - \`/apply\` to apply these changes (only members of the \`${teamNames}\` team(s) can approve)
+            - \`/retry\` to run the CI/CD pipeline again (without applying changes)
 
-            **Note:** Only members of the \`${teamNames}\` team(s) can approve and trigger the apply.`;
+            **Notes:** Only members of the \`${teamNames}\` team(s) can approve and trigger the apply.
+            **Note:** The retry option is useful if you've made changes to your PR and want to see an updated plan.`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
