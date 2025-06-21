@@ -111,7 +111,7 @@ jobs:
               BRANCH_FILTER_VALID="true"
             fi
 
-            if [[ "$BRANCH_FILTER_VALID" == "true" && "$COMMENT_BODY" == "apply" ]]; then
+            if [[ "$BRANCH_FILTER_VALID" == "true" && "$COMMENT_BODY" == "/apply" ]]; then
               TF_APPLY="true"
             fi
 
