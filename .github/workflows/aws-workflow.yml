@@ -150,6 +150,12 @@ jobs:
         uses: pre-commit/action@v3.0.1
         with:
           working-directory: ${{ env.working_dir_tf }}
+      - name: Upload pre-commit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-commit-report
+          path: terraform/pre-commit-report
+          retention-days: 1
 
   web_build:
     name: Web Build
