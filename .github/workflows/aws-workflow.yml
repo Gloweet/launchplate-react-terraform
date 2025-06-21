@@ -538,7 +538,7 @@ jobs:
     needs:
       [web_build, compute_env, detect_changes, terraform_dependency, tf_apply]
     if: |
-      needs.detect_changes.outputs.deploy_web == 'true'
+      needs.detect_changes.outputs.deploy_web == 'true' &&
       (needs.tf_apply.result == 'success' || needs.tf_apply.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
