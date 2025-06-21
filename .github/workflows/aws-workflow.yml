@@ -174,16 +174,15 @@ jobs:
 
       - name: set-job-conditions
         run: |
-          RUN_TF=${{github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true'}}
-          DEPLOY_TF=$(RUN_TF && ${{needs.compute_env.tf_apply == 'true'}})
-
-          RUN_WEB=${{ steps.filter.outputs.web == true }}
-          DEPLOY_WEB=$(RUN_WEB && ${{needs.compute_env.branch_filter_valid == 'true'}})
-
-          echo "run_tf=$RUN_TF" >> $GITHUB_OUTPUT
-          echo "run_web=$RUN_WEB" >> $GITHUB_OUTPUT
-          echo "deploy_tf=$DEPLOY_TF" >> $GITHUB_OUTPUT
-          echo "deploy_web=$DEPLOY_WEB" >> $GITHUB_OUTPUT
+          echo "run_tf=${RUN_TF}" >> $GITHUB_OUTPUT
+          echo "run_web=${RUN_WEB}" >> $GITHUB_OUTPUT
+          echo "deploy_tf=${DEPLOY_TF}" >> $GITHUB_OUTPUT
+          echo "deploy_web=${DEPLOY_WEB}" >> $GITHUB_OUTPUT
+        env:
+          RUN_TF: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true' }}
+          DEPLOY_TF: ${{ (github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true') && needs.compute_env.tf_apply == 'true' }}
+          RUN_WEB: ${{ steps.filter.outputs.web == 'true' }}
+          DEPLOY_WEB: ${{ steps.filter.outputs.web == 'true' && needs.compute_env.branch_filter_valid == 'true' }}
 
   tf_checks:
     name: TF Checks
