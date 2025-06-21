@@ -69,6 +69,7 @@ jobs:
         run: echo "${{ toJSON(github) }}"
 
   compute_env:
+    name: Compute Environment
     runs-on: ubuntu-latest
     outputs:
       # Target environment (default: dev)
