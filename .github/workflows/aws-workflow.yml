@@ -364,6 +364,9 @@ jobs:
       - name: Create Plan Summary Comment
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
+        env:
+          TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
+          PLAN_OUTPUT: ${{ env.PLAN_OUTPUT }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -434,6 +437,7 @@ jobs:
         env:
           ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
           PLAN_OUTPUT: ${{ env.PLAN_OUTPUT }}
+          TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
 
   tf_apply:
     name: TF Apply
