@@ -45,7 +45,7 @@ on:
       - "release/*"
       - "feature/*"
       - "bugfix/*"
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, closed]
   issue_comment:
     types: [created]
 env:
@@ -191,11 +191,21 @@ jobs:
         run: |
           echo "Evaluating and exporting outputs..."
 
+          run_all=${{ github.event_name == 'workflow_dispatch' }}
 
-          echo "run_tf=${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true' }}" | tee -a $GITHUB_OUTPUT
-          echo "deploy_tf=${{ (github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true') && needs.compute_env.outputs.tf_apply == 'true' }}" | tee -a $GITHUB_OUTPUT
-          echo "run_web=${{ steps.filter.outputs.web == 'true' }}" | tee -a $GITHUB_OUTPUT
-          echo "deploy_web=${{ steps.filter.outputs.web == 'true' && needs.compute_env.outputs.branch_filter_valid == 'true' && (!github.event.pull_request || github.event.pull_request.merged == 'true') }}" | tee -a $GITHUB_OUTPUT
+          echo "run_all=$run_all" | tee -a $GITHUB_OUTPUT
+
+          echo "run_tf=$(( $run_all || '${{ steps.filter.outputs.terraform }}' == 'true' ))" | tee -a $GITHUB_OUTPUT
+
+          echo "deploy_tf=$(( ($run_all || '${{ steps.filter.outputs.terraform }}' == 'true') && '${{ needs.compute_env.outputs.tf_apply }}' == 'true' ))" | tee -a $GITHUB_OUTPUT
+
+          echo "run_web=$(( $run_all || '${{ steps.filter.outputs.web }}' == 'true' ))" | tee -a $GITHUB_OUTPUT
+
+          echo "deploy_web=$((
+            ($run_all || '${{ steps.filter.outputs.web }}' == 'true') &&
+            '${{ needs.compute_env.outputs.branch_filter_valid }}' == 'true' &&
+            ('${{ github.event_name }}' != 'pull_request' || '${{ github.event.pull_request.merged }}' == 'true')
+          ))" | tee -a $GITHUB_OUTPUT
 
   tf_checks:
     name: TF Checks
