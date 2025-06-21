@@ -49,3 +49,17 @@ repos:
       - id: detect-private-key
       - id: end-of-file-fixer
       - id: trailing-whitespace
+      - id: detect-aws-credentials
+        args:
+          - --allow-missing-credentials
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.27.2
+    hooks:
+      - id: gitleaks
+        args:
+          - .
+          - --report-format=json
+          - --report-path=terraform/pre-commit-report/gitleaks-report.json
+          - --no-color
+          - --no-banner
+          - --config=terraform/.gitleaks.toml

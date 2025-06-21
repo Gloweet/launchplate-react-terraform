@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# You can run a single hook using:
+# pre-commit run <hook> -a --color never --verbose
+
 set -euo pipefail
 
 terraform workspace select prod
@@ -9,6 +12,7 @@ mkdir -p "$REPORT_DIR"
 
 # Hooks to run
 HOOKS=(
+  gitleaks
   terraform-docs-go
   terraform_fmt
   terraform_tflint
