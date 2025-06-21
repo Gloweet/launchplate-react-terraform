@@ -172,23 +172,21 @@ jobs:
             web:
               - 'web/**'
 
-      - name: set-job-conditions
+      - name: Set and dump job conditions
+        id: set-job-conditions
         run: |
-          echo "run_tf=${RUN_TF}" >> $GITHUB_OUTPUT
-          echo "run_web=${RUN_WEB}" >> $GITHUB_OUTPUT
-          echo "deploy_tf=${DEPLOY_TF}" >> $GITHUB_OUTPUT
-          echo "deploy_web=${DEPLOY_WEB}" >> $GITHUB_OUTPUT
-        env:
-          RUN_TF: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true' }}
-          DEPLOY_TF: ${{ (github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true') && needs.compute_env.tf_apply == 'true' }}
-          RUN_WEB: ${{ steps.filter.outputs.web == 'true' }}
-          DEPLOY_WEB: ${{ steps.filter.outputs.web == 'true' && needs.compute_env.branch_filter_valid == 'true' }}
+          echo "Evaluating and exporting outputs..."
+
+          echo "run_tf=${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true' }}" | tee -a $GITHUB_OUTPUT
+          echo "deploy_tf=${{ (github.event_name == 'workflow_dispatch' || steps.filter.outputs.terraform == 'true') && needs.compute_env.outputs.tf_apply == 'true' }}" | tee -a $GITHUB_OUTPUT
+          echo "run_web=${{ steps.filter.outputs.web == 'true' }}" | tee -a $GITHUB_OUTPUT
+          echo "deploy_web=${{ steps.filter.outputs.web == 'true' && needs.compute_env.outputs.branch_filter_valid == 'true' }}" | tee -a $GITHUB_OUTPUT
 
   tf_checks:
     name: TF Checks
     runs-on: ubuntu-latest
     needs: [detect_changes]
-    if: needs.detect_changes.outputs.run_tf == true
+    if: needs.detect_changes.outputs.run_tf == 'true'
 
     steps:
       - name: Checkout repository
