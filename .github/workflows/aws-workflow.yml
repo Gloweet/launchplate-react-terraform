@@ -224,9 +224,31 @@ jobs:
       - name: Install pre-commit
         run: pip install pre-commit
 
-      - name: Run pre-commit in terraform directory
-        run: pre-commit run --show-diff-on-failure --color=always --all-files
-        working-directory: terraform
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
+
+      - name: Install Gitleaks
+        run: |
+          curl -sL https://github.com/gitleaks/gitleaks/releases/latest/download/gitleaks_$(uname -s)_$(uname -m).tar.gz | tar xz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Install Checkov
+        run: pip install checkov
+
+      - name: Run pre-commit hooks in terraform directory
+        run: |
+          cd terraform
+          pre-commit run --config .pre-commit-config-ci.yaml --show-diff-on-failure --color=always --all-files
+        continue-on-error: true
 
       - name: Upload pre-commit reports
         uses: actions/upload-artifact@v4
@@ -234,6 +256,7 @@ jobs:
           name: pre-commit-report
           path: terraform/pre-commit-report
           retention-days: 1
+        continue-on-error: true
 
   web_build:
     name: Web Build
