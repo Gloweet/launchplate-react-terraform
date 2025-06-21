@@ -605,21 +605,23 @@ jobs:
 
     steps:
       - uses: technote-space/workflow-conclusion-action@v3
-
       - uses: 8398a7/action-slack@v3
         if: env.WORKFLOW_CONCLUSION != 'skipped' && env.WORKFLOW_CONCLUSION != 'cancelled'
         with:
           status: custom
-          fields: workflow,job,commit,repo,ref,author,took
+          fields: workflow,commit,repo,ref,author,took
           custom_payload: |
             {
               attachments: [{
                 color: '${{ env.WORKFLOW_CONCLUSION }}' === 'success' ? 'good' : '${{ env.WORKFLOW_CONCLUSION }}' === 'failure' ? 'danger' : 'warning',
-                text: `${process.env.AS_WORKFLOW}\n${process.env.AS_JOB} (${process.env.AS_COMMIT}) of ${process.env.AS_REPO}@${process.env.AS_REF} by ${process.env.AS_AUTHOR} *${{ env.WORKFLOW_CONCLUSION }}* in ${process.env.AS_TOOK}
+                text: `${process.env.AS_WORKFLOW} — *${{ env.WORKFLOW_CONCLUSION }}*
+                ${process.env.AS_AUTHOR} deployed ${process.env.AS_REPO}@${process.env.AS_REF} (${process.env.AS_COMMIT}) in ${process.env.AS_TOOK}
 
-                *Environment:* ${{ needs.detect_changes.outputs.environment }}
-                *Terraform Deployed:* ${{ needs.detect_changes.outputs.tf_deploy }}
-                *S3 Synced:* ${{ needs.detect_changes.outputs.web_deploy }}`
+                *Environment:* ${{ needs.detect_changes.outputs.environment }}${
+                  '${{ needs.detect_changes.outputs.tf_deploy }}' ? `\n*Terraform Deployed:* ${{ needs.detect_changes.outputs.tf_deploy }}` : ''
+                }${
+                  '${{ needs.detect_changes.outputs.web_deploy }}' ? `\n*S3 Synced:* ${{ needs.detect_changes.outputs.web_deploy }}` : ''
+                }`
               }]
             }
         env:
