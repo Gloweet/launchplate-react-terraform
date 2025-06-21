@@ -5,6 +5,13 @@ data "github_repository" "repo" {
   name = var.repository_name
 }
 
+# Create repository variables
+resource "github_actions_variable" "terraform_approvers" {
+  repository    = data.github_repository.repo.name
+  variable_name = "TERRAFORM_APPROVERS"
+  value         = jsonencode(var.terraform_approvers)
+}
+
 # Create repository secrets
 resource "github_actions_secret" "slack_webhook_url" {
   repository      = data.github_repository.repo.name

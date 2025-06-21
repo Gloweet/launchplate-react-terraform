@@ -17,6 +17,11 @@ variable "repository_name" {
   default     = "launchplate-react"
 }
 
+variable "terraform_approvers" {
+  description = "List of GitHub teams who can approve Terraform changes"
+  type        = list(string)
+}
+
 variable "slack_webhook_url" {
   description = "Slack webhook URL for notifications"
   type        = string

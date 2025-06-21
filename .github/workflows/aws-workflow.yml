@@ -54,7 +54,6 @@ env:
   working_dir_tf: "terraform/live"
   working_dir_web: "web"
   tf_plugin_cache_dir: ${{ github.workspace }}/.terraform.d/plugin-cache
-  terraform_approvers: '["terraform-approvers"]'
   auto_apply: ${{ (github.event_name == 'workflow_dispatch' && github.event.inputs.auto_apply == 'true') || (github.event_name == 'push' && (github.ref == 'refs/heads/development' || github.ref == 'refs/heads/staging')) }}
 
   # verbosity setting for Terraform logs
@@ -446,21 +445,34 @@ jobs:
       - name: Check commenter team membership
         if: github.event_name == 'issue_comment'
         uses: actions/github-script@v6
+        env:
+          TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const environment = needs.detect_changes.outputs.environment
-            const commenter = context.payload.comment.user.login
-            const teams = JSON.parse(process.env.TERRAFORM_APPROVERS)
-            let isApproved = false
+            const environment = needs.detect_changes.outputs.environment;
+            const commenter = context.payload.comment.user.login;
+
+            const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
+            const org = context.repo.owner;
+
+            // Array of team slugs without org prefix
+            const teamsRaw = approversEnv.split(',').map(t => t.trim()).filter(Boolean);
+
+            // Add org prefix to get full team slugs
+            const teams = teamsRaw.map(team => team.includes('/') ? team : `${org}/${team}`);
+
+            let isApproved = false;
 
             try {
-              // For pull request comments only
-              for (const team of teams) {
+              for (const fullTeamSlug of teams) {
+                // Split to org and team slug for API call (in case fullTeamSlug has org)
+                const [teamOrg, teamSlug] = fullTeamSlug.split('/');
+
                 try {
                   const { data: teamMembership } = await github.rest.teams.getMembershipForUserInOrg({
-                    org: context.repo.owner,
-                    team_slug: team,
+                    org: teamOrg,
+                    team_slug: teamSlug,
                     username: commenter
                   });
 
@@ -470,13 +482,13 @@ jobs:
                       issue_number: context.issue.number,
                       owner: context.repo.owner,
                       repo: context.repo.repo,
-                      body: `✅ Terraform apply approved by @${commenter} (member of ${team}) for environment: ${environment}`
+                      body: `✅ Terraform apply approved by @${commenter} (member of @${fullTeamSlug}) for environment: ${environment}`
                     });
                     break;
                   }
                 } catch (err) {
                   // User is not in this team, continue checking other teams
-                  console.log(`User ${commenter} is not in team ${team}: ${err.message}`);
+                  console.log(`User ${commenter} is not in team ${fullTeamSlug}: ${err.message}`);
                 }
               }
 
@@ -485,7 +497,7 @@ jobs:
                   issue_number: context.issue.number,
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  body: `❌ @${commenter} is not authorized to approve Terraform apply. Must be a member of: ${teams.join(', ')}`
+                  body: `❌ @${commenter} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
                 });
                 core.setFailed('Commenter is not in an approved team');
               }
@@ -499,9 +511,6 @@ jobs:
               });
               core.setFailed(`Error checking team membership: ${error.message}`);
             }
-        env:
-          TERRAFORM_APPROVERS: ${{ env.terraform_approvers }}
-          ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
