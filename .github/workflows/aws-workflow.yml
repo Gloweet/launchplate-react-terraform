@@ -383,7 +383,7 @@ jobs:
       # When manual approval is required (on workflow_dispatch and push):
       # Create an annotation to notify the user on the TF plan and how to apply it
       - name: Generate Terraform Plan Output
-        if: needs.detect_changes.outputs.
+        if: needs.compute_env.outputs.auto_apply == 'false'
         run: |
           cd ${{ env.working_dir_tf }}
           terraform show -no-color tfplan > plan_output.txt
