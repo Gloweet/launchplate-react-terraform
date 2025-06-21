@@ -1,4 +1,4 @@
-# Primary origin bucket
+# Primary origin bucket #
 resource "aws_s3_bucket" "primary" {
   bucket        = "${local.prefix}-primary"
   force_destroy = false
