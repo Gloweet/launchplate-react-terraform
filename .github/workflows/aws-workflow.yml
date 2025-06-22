@@ -590,6 +590,7 @@ jobs:
           ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
           TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
           ACTOR_TEAMS: ${{ steps.actorTeams.outputs.teams }}
+          NOTIFY: ${{ github.event_name == 'issue_comment' }}
         with:
           script: |
             // Retrieve array of approved team slugs without org prefix
@@ -601,23 +602,28 @@ jobs:
             const actorTeams = actorTeamsEnv.map(t => t.trim()).filter(Boolean).map(team => team.includes('/') ? team.split('/')[1] : team);
 
             const matchedTeam = actorTeams.find(team => approvedTeams.includes(team));
-            if (matchedTeam) {
+            if (process.env.NOTIFY) {
+              if (matchedTeam) {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `✅ Terraform apply approved by @${context.actor} (member of @${matchedTeam}) for environment: ${process.env.ENVIRONMENT}`
+                });
+                return;
+              }
+
               await github.rest.issues.createComment({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `✅ Terraform apply approved by @${context.actor} (member of @${matchedTeam}) for environment: ${process.env.ENVIRONMENT}`
+                body: `❌ @${context.actor} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
               });
-              return;
             }
 
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `❌ @${context.actor} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
-            });
-            throw new Error('Commenter is not in an approved team');
+            if (!matchedTeam) {
+              throw new Error('Commenter is not in an approved team');
+            }
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -663,7 +669,7 @@ jobs:
     name: Notify Terraform Apply Status
     runs-on: ubuntu-latest
     needs: [detect_changes, tf_apply]
-    if: always() && needs.tf_apply.result != 'skipped'
+    if: always() && needs.tf_apply.result != 'skipped' && github.event_name == 'issue_comment'
     steps:
       - name: Comment on PR or Issue
         uses: actions/github-script@v6
