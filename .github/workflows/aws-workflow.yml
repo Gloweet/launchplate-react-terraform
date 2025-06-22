@@ -1,5 +1,8 @@
 name: AWS multi-env deployment
 
+# Ref:
+# github-script context: https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+
 permissions:
   # Allows the workflow to request an OIDC token
   id-token: write
@@ -579,18 +582,14 @@ jobs:
         uses: actions/github-script@v6
         env:
           ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
-          COMMENTER: ${{ github.event.comment.user.login }}
-          REPO_NAME: ${{ github.repository }}
-          REPO_OWNER: ${{ github.repository_owner }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
 
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const commenter = process.env.COMMENTER;
-            const repoOwner = process.env.REPO_OWNER;
-            const repoName = process.env.REPO_NAME;
-            const issueNumber = process.env.ISSUE_NUMBER;
+            const commenter = context.actor;
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+            const issueNumber = context.issue.number;
             const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
 
             // Array of team slugs without org prefix
@@ -700,33 +699,31 @@ jobs:
         env:
           TF_APPLY_STATUS: ${{ needs.tf_apply.result }}
           ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
-          REPO_NAME: ${{ github.repository }}
-          REPO_OWNER: ${{ github.repository_owner }}
-          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const repoOwner = process.env.REPO_OWNER;
-            const repoName = process.env.REPO_NAME.replace(`${repoOwner}/`, '');
-            let issueNumber = process.env.ISSUE_NUMBER;
+            const commenter = context.actor;
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+            let issueNumber = context.issue.number;
 
             let commentBody = '';
 
             switch (process.env.TF_APPLY_STATUS) {
               case 'success':
-                commentBody = `🟢 Terraform successfully applied for environment: ${process.env.ENVIRONMENT}!`;
+                commentBody = `🟢 Terraform successfully applied for environment: ${process.env.ENVIRONMENT}! Requested by @${commenter}.`;
                 break;
               case 'failure':
-                commentBody = `🔴 Terraform failed to be applied for environment: ${process.env.ENVIRONMENT}`;
+                commentBody = `🔴 Terraform failed to be applied for environment: ${process.env.ENVIRONMENT}. Requested by @${commenter}.`;
                 break;
               default:
-                commentBody = `🟡 The Terraform apply job ended with the status ${process.env.TF_APPLY_STATUS} for environment: ${process.env.ENVIRONMENT}`;
+                commentBody = `🟡 The Terraform apply job ended with the status ${process.env.TF_APPLY_STATUS} for environment: ${process.env.ENVIRONMENT}. Requested by @${commenter}.`;
                 break;
             }
 
             try {
               await github.rest.issues.createComment({
-                issue_number: parseInt(issueNumber),
+                issue_number: issueNumber,
                 owner: repoOwner,
                 repo: repoName,
                 body: commentBody
