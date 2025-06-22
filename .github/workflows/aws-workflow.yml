@@ -711,13 +711,13 @@ jobs:
 
             switch (process.env.TF_APPLY_STATUS) {
               case 'success':
-                commentBody = `🟢 Terraform successfully applied for environment: ${process.env.ENVIRONMENT}! Requested by @${commenter}.`;
+                commentBody = `🟢 Terraform successfully applied for environment: ${process.env.ENVIRONMENT}\n\nRequested by @${commenter}.`;
                 break;
               case 'failure':
-                commentBody = `🔴 Terraform failed to be applied for environment: ${process.env.ENVIRONMENT}. Requested by @${commenter}.`;
+                commentBody = `🔴 Terraform failed to be applied for environment: ${process.env.ENVIRONMENT}\n\nRequested by @${commenter}.`;
                 break;
               default:
-                commentBody = `🟡 The Terraform apply job ended with the status ${process.env.TF_APPLY_STATUS} for environment: ${process.env.ENVIRONMENT}. Requested by @${commenter}.`;
+                commentBody = `🟡 The Terraform apply job ended with the status ${process.env.TF_APPLY_STATUS} for environment: ${process.env.ENVIRONMENT}\n\nRequested by @${commenter}.`;
                 break;
             }
 
