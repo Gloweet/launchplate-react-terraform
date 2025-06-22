@@ -114,7 +114,8 @@ On push, the workflow will automatically:
 1. Build the application using the target environment configuration.
 2. Generate a terraform plan.
 
-The branches are automatically deployed based on the branch name:
+If the web application files were updated, the S3 buckets are automatically synced and the CloudFront cache is invalidated.
+The matching between branch names and target environment is like so:
 | Source Branch | Target Environment |
 |---------------|--------------------|
 | main          | prod               |
