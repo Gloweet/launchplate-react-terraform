@@ -437,9 +437,10 @@ jobs:
       - name: Terraform Plan
         env:
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DISABLE_STATE_LOCK: ${{ needs.detect_changes.outputs.deploy_tf == 'false' }}
         run: |
           cd ${{ env.working_dir_tf }}
-          terraform plan -out=tfplan
+          terraform plan -out=tfplan -lock=${{ env.DISABLE_STATE_LOCK ? 'false' : 'true' }}
 
       - name: Upload Terraform Plan
         uses: actions/upload-artifact@v4
