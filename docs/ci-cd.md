@@ -164,7 +164,7 @@ locals {
 
 3. **CD Process**:
    - Plan Terraform changes
-   - Apply Terraform changes (only on merge/push to environment branches)
+   - Apply Terraform changes (only on /apply in PRs, or on workflow_dispatch when checking "Apply Terraform changes automatically")
    - Deploy the React application to S3
    - Invalidate CloudFront cache
 
