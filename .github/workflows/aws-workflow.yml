@@ -578,21 +578,27 @@ jobs:
         if: github.event_name == 'issue_comment'
         uses: actions/github-script@v6
         env:
-          TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
+          ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
+          COMMENTER: ${{ github.event.comment.user.login }}
+          REPO_NAME: ${{ github.repository }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const environment = needs.detect_changes.outputs.environment;
-            const commenter = context.payload.comment.user.login;
-
+            const environment = process.env.ENVIRONMENT;
+            const commenter = process.env.COMMENTER;
+            const repoOwner = process.env.REPO_OWNER;
+            const repoName = process.env.REPO_NAME;
+            const issueNumber = process.env.ISSUE_NUMBER;
             const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
-            const org = context.repo.owner;
 
             // Array of team slugs without org prefix
             const teamsRaw = approversEnv.map(t => t.trim()).filter(Boolean);
 
             // Add org prefix to get full team slugs
-            const teams = teamsRaw.map(team => team.includes('/') ? team : `${org}/${team}`);
+            const teams = teamsRaw.map(team => team.includes('/') ? team : `${repoOwner}/${team}`);
 
             let isApproved = false;
 
@@ -611,9 +617,9 @@ jobs:
                   if (teamMembership.state === 'active') {
                     isApproved = true;
                     await github.rest.issues.createComment({
-                      issue_number: context.issue.number,
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
+                      issue_number: issueNumber,
+                      owner: repoOwner,
+                      repo: repoName,
                       body: `✅ Terraform apply approved by @${commenter} (member of @${fullTeamSlug}) for environment: ${environment}`
                     });
                     break;
@@ -626,22 +632,22 @@ jobs:
 
               if (!isApproved) {
                 await github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  owner: repoOwner,
+                  repo: repoName,
                   body: `❌ @${commenter} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
                 });
-                core.setFailed('Commenter is not in an approved team');
+                throw new Error('Commenter is not in an approved team');
               }
             } catch (error) {
               console.error('Error checking team membership:', error);
               await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                issue_number: issueNumber,
+                owner: repoOwner,
+                repo: repoName,
                 body: `❌ Error checking team membership: ${error.message}`
               });
-              core.setFailed(`Error checking team membership: ${error.message}`);
+              throw new Error(`Error checking team membership: ${error.message}`);
             }
 
       - name: Checkout repository
