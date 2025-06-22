@@ -536,7 +536,8 @@ jobs:
       # When manual approval is required (on workflow_dispatch and push):
       # Create an annotation to notify the user on the TF plan and how to apply it
       - name: Generate Terraform Plan Output
-        if: needs.compute_env.outputs.auto_apply == 'false'
+        if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.detect_changes.outputs.deploy_tf == 'true' }}
+
         run: |
           cd ${{ env.working_dir_tf }}
           terraform show -no-color tfplan > plan_output.txt
@@ -545,7 +546,8 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Create Workflow Run Annotation for Manual Approval
-        if: needs.compute_env.outputs.auto_apply == 'false'
+        if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.detect_changes.outputs.deploy_tf == 'true' }}
+
         run: |
           # Create a summary of the plan using a more reliable method
           PLAN_SUMMARY=$(echo "$PLAN_OUTPUT" | grep -E 'Plan:|No changes' || echo "Plan: unknown")
@@ -594,7 +596,7 @@ jobs:
             // Retrieve array of approved team slugs without org prefix
             const approvedTeamsEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
             const approvedTeams = approvedTeamsEnv.map(t => t.trim()).filter(Boolean).map(team => team.includes('/') ? team.split('/')[1] : team);
-            
+
             // Retrieve array of actor's team slugs without org prefix
             const actorTeamsEnv = JSON.parse(process.env.ACTOR_TEAMS || '[]');
             const actorTeams = actorTeamsEnv.map(t => t.trim()).filter(Boolean).map(team => team.includes('/') ? team.split('/')[1] : team);
