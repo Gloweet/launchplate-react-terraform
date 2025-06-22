@@ -10,6 +10,11 @@ output "repository_html_url" {
   value       = data.github_repository.repo.html_url
 }
 
+output "terraform_approvers" {
+  description = "List of GitHub teams who can approve Terraform changes"
+  value       = var.terraform_approvers
+}
+
 output "slack_webhook_url_secret_created" {
   description = "Confirmation that the Slack webhook URL secret was created"
   value       = github_actions_secret.slack_webhook_url.secret_name
