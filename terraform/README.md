@@ -96,7 +96,6 @@ If using Cloudflare, you need to retrieve an API Token with the following permis
 4. Name the token, e.g. "terraform-cloudflare"
 5. Select the following permissions:
    - Zone > Zone > Read
-   - Zone > Zone > Edit
    - Zone > DNS > Read
    - Zone > DNS > Edit
    - Zone > Page Rules > Read

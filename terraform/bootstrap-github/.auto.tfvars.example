@@ -2,7 +2,7 @@ github_token    = "your_github_token"
 github_owner    = "your_github_org_or_username"
 repository_name = "launchplate-react"
 
-# These values will be used to create the repository secrets
+terraform_approvers = ["terraform-approvers"]
 slack_webhook_url = "https://hooks.slack.com/services/YOUR_SLACK_WEBHOOK"
 aws_role_arn      = "arn:aws:iam:::role/YOUR_GITHUB_ACTIONS_ROLE"
 
