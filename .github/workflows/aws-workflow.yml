@@ -260,9 +260,9 @@ jobs:
 
             let comment;
             if (process.env.RUN_TF == 'true') {
-              comment = 'Starting Terraform apply...';
+              comment = 'ℹ️ Starting Terraform apply...';
             } else {
-              comment = 'Skipping Terraform apply as no changes detected.';
+              comment = '🟡 Skipping Terraform apply as no changes detected.';
             }
 
             await github.rest.issues.createComment({
@@ -587,7 +587,6 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const environment = process.env.ENVIRONMENT;
             const commenter = process.env.COMMENTER;
             const repoOwner = process.env.REPO_OWNER;
             const repoName = process.env.REPO_NAME;
@@ -620,7 +619,7 @@ jobs:
                       issue_number: issueNumber,
                       owner: repoOwner,
                       repo: repoName,
-                      body: `✅ Terraform apply approved by @${commenter} (member of @${fullTeamSlug}) for environment: ${environment}`
+                      body: `✅ Terraform apply approved by @${commenter} (member of @${fullTeamSlug}) for environment: ${process.env.ENVIRONMENT}`
                     });
                     break;
                   }
@@ -690,6 +689,53 @@ jobs:
           cd ${{ env.working_dir_tf }}
           terraform apply -auto-approve tfplan
 
+  tf_apply_notification:
+    name: Notify Terraform Apply Status
+    runs-on: ubuntu-latest
+    needs: [detect_changes, tf_apply]
+    if: always() && needs.tf_apply.result != 'skipped'
+    steps:
+      - name: Comment on PR or Issue
+        uses: actions/github-script@v6
+        env:
+          TF_APPLY_STATUS: ${{ needs.tf_apply.result }}
+          ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
+          REPO_NAME: ${{ github.repository }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          ISSUE_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const repoOwner = process.env.REPO_OWNER;
+            const repoName = process.env.REPO_NAME.replace(`${repoOwner}/`, '');
+            let issueNumber = process.env.ISSUE_NUMBER;
+
+            let commentBody = '';
+
+            switch (process.env.TF_APPLY_STATUS) {
+              case 'success':
+                commentBody = `🟢 Terraform successfully applied for environment: ${process.env.ENVIRONMENT}!`;
+                break;
+              case 'failure':
+                commentBody = `🔴 Terraform failed to be applied for environment: ${process.env.ENVIRONMENT}`;
+                break;
+              default:
+                commentBody = `🟡 The Terraform apply job ended with the status ${process.env.TF_APPLY_STATUS} for environment: ${process.env.ENVIRONMENT}`;
+                break;
+            }
+
+            try {
+              await github.rest.issues.createComment({
+                issue_number: parseInt(issueNumber),
+                owner: repoOwner,
+                repo: repoName,
+                body: commentBody
+              });
+              console.log("Comment posted successfully");
+            } catch (error) {
+              console.error(`Error posting comment: ${error.message}`);
+            }
+
   terraform_dependency:
     name: Terraform Dependency Check
     needs: [detect_changes]
@@ -703,7 +749,14 @@ jobs:
   s3_sync:
     name: Web Sync to S3
     needs:
-      [web_build, compute_env, detect_changes, terraform_dependency, tf_apply]
+      [
+        web_build,
+        compute_env,
+        detect_changes,
+        terraform_dependency,
+        tf_apply,
+        tf_apply_notification,
+      ]
     if: |
       needs.detect_changes.outputs.deploy_web == 'true' &&
       (needs.tf_apply.result == 'success' || needs.tf_apply.result == 'skipped')
@@ -746,7 +799,7 @@ jobs:
 
   slack:
     name: Slack
-    needs: [detect_changes, s3_sync, tf_apply]
+    needs: [detect_changes, s3_sync, tf_apply, tf_apply_notification]
     if: always()
     runs-on: ubuntu-latest
 
