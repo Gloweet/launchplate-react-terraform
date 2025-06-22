@@ -600,52 +600,43 @@ jobs:
 
             let isApproved = false;
 
-            try {
-              for (const fullTeamSlug of teams) {
-                // Split to org and team slug for API call (in case fullTeamSlug has org)
-                const [teamOrg, teamSlug] = fullTeamSlug.split('/');
+            for (const fullTeamSlug of teams) {
+              // Split to org and team slug for API call (in case fullTeamSlug has org)
+              const [teamOrg, teamSlug] = fullTeamSlug.split('/');
 
-                try {
-                  const { data: teamMembership } = await github.rest.teams.getMembershipForUserInOrg({
-                    org: teamOrg,
-                    team_slug: teamSlug,
-                    username: commenter
-                  });
-
-                  if (teamMembership.state === 'active') {
-                    isApproved = true;
-                    await github.rest.issues.createComment({
-                      issue_number: issueNumber,
-                      owner: repoOwner,
-                      repo: repoName,
-                      body: `✅ Terraform apply approved by @${commenter} (member of @${fullTeamSlug}) for environment: ${process.env.ENVIRONMENT}`
-                    });
-                    break;
-                  }
-                } catch (err) {
-                  // User is not in this team, continue checking other teams
-                  console.log(`User ${commenter} is not in team ${fullTeamSlug}: ${err.message}`);
-                }
-              }
-
-              if (!isApproved) {
-                await github.rest.issues.createComment({
-                  issue_number: issueNumber,
-                  owner: repoOwner,
-                  repo: repoName,
-                  body: `❌ @${commenter} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
+              try {
+                const { data: teamMembership } = await github.rest.teams.getMembershipForUserInOrg({
+                  org: teamOrg,
+                  team_slug: teamSlug,
+                  username: commenter
                 });
-                throw new Error('Commenter is not in an approved team');
+
+                console.log(`User ${commenter} membership status in team ${fullTeamSlug}: ${teamMembership.state}`);
+
+                if (teamMembership.state === 'active') {
+                  isApproved = true;
+                  await github.rest.issues.createComment({
+                    issue_number: issueNumber,
+                    owner: repoOwner,
+                    repo: repoName,
+                    body: `✅ Terraform apply approved by @${commenter} (member of @${fullTeamSlug}) for environment: ${process.env.ENVIRONMENT}`
+                  });
+                  break;
+                }
+              } catch (err) {
+                // User is not in this team, continue checking other teams
+                console.log(`User ${commenter} is not in team ${fullTeamSlug}: ${err.message}`);
               }
-            } catch (error) {
-              console.error('Error checking team membership:', error);
+            }
+
+            if (!isApproved) {
               await github.rest.issues.createComment({
                 issue_number: issueNumber,
                 owner: repoOwner,
                 repo: repoName,
-                body: `❌ Error checking team membership: ${error.message}`
+                body: `❌ @${commenter} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
               });
-              throw new Error(`Error checking team membership: ${error.message}`);
+              throw new Error('Commenter is not in an approved team');
             }
 
       - name: Checkout repository
