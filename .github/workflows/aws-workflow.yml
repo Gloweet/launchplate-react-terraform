@@ -577,67 +577,42 @@ jobs:
     if: needs.detect_changes.outputs.deploy_tf == 'true'
 
     steps:
+      - uses: tspascoal/get-user-teams-membership@v3
+        id: actorTeams
+        with:
+          username: ${{ github.actor }}
+
       - name: Check commenter team membership
-        if: github.event_name == 'issue_comment'
         uses: actions/github-script@v6
         env:
           ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
           TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
-
+          ACTOR_TEAMS: ${{ steps.actorTeams.outputs.teams }}
         with:
           script: |
-            const commenter = context.actor;
-            const repoOwner = context.repo.owner;
-            const repoName = context.repo.repo;
-            const issueNumber = context.issue.number;
+            // Retrieve array of team slugs without org prefix
             const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
-
-            // Array of team slugs without org prefix
             const teamsRaw = approversEnv.map(t => t.trim()).filter(Boolean);
+            const teamsPrefixLess = teamsRaw.map(team => team.includes('/') ? team.split('/')[1] : team);
 
-            // Add org prefix to get full team slugs
-            const teams = teamsRaw.map(team => team.includes('/') ? team : `${repoOwner}/${team}`);
-
-            let isApproved = false;
-
-            for (const fullTeamSlug of teams) {
-              // Split to org and team slug for API call (in case fullTeamSlug has org)
-              const [teamOrg, teamSlug] = fullTeamSlug.split('/');
-
-              try {
-                const { data: teamMembership } = await github.rest.teams.getMembershipForUserInOrg({
-                  org: teamOrg,
-                  team_slug: teamSlug,
-                  username: commenter
+            const isApproved = teamsPrefixLess.some(team => process.env.ACTOR_TEAMS.includes(team));
+            if (isApproved) {
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: `✅ Terraform apply approved by @${context.actor} (member of @${fullTeamSlug}) for environment: ${process.env.ENVIRONMENT}`
                 });
-
-                console.log(`User ${commenter} membership status in team ${fullTeamSlug}: ${teamMembership.state}`);
-
-                if (teamMembership.state === 'active') {
-                  isApproved = true;
-                  await github.rest.issues.createComment({
-                    issue_number: issueNumber,
-                    owner: repoOwner,
-                    repo: repoName,
-                    body: `✅ Terraform apply approved by @${commenter} (member of @${fullTeamSlug}) for environment: ${process.env.ENVIRONMENT}`
-                  });
-                  break;
-                }
-              } catch (err) {
-                // User is not in this team, continue checking other teams
-                console.log(`User ${commenter} is not in team ${fullTeamSlug}: ${err.message}`);
+                return;
               }
-            }
 
-            if (!isApproved) {
-              await github.rest.issues.createComment({
-                issue_number: issueNumber,
-                owner: repoOwner,
-                repo: repoName,
-                body: `❌ @${commenter} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
-              });
-              throw new Error('Commenter is not in an approved team');
-            }
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ @${context.actor} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
+            });
+            throw new Error('Commenter is not in an approved team');
 
       - name: Checkout repository
         uses: actions/checkout@v4
