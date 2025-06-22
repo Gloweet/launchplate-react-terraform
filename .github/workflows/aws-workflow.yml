@@ -260,12 +260,13 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue = context.payload.issue;
+            const commenter = context.actor;
 
             let comment;
             if (process.env.RUN_TF == 'true') {
-              comment = 'ℹ️ Starting Terraform apply...';
+              comment = `ℹ️ Terraform apply requested by @${commenter}...`;
             } else {
-              comment = '🟡 Skipping Terraform apply as no changes detected.';
+              comment = '🟡 Skipping Terraform apply as no changes detected.\n\nRequested by @${commenter}';
             }
 
             await github.rest.issues.createComment({
