@@ -591,21 +591,24 @@ jobs:
           ACTOR_TEAMS: ${{ steps.actorTeams.outputs.teams }}
         with:
           script: |
-            // Retrieve array of team slugs without org prefix
-            const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
-            const teamsRaw = approversEnv.map(t => t.trim()).filter(Boolean);
-            const teamsPrefixLess = teamsRaw.map(team => team.includes('/') ? team.split('/')[1] : team);
+            // Retrieve array of approved team slugs without org prefix
+            const approvedTeamsEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
+            const approvedTeams = approvedTeamsEnv.map(t => t.trim()).filter(Boolean).map(team => team.includes('/') ? team.split('/')[1] : team);
+            
+            // Retrieve array of actor's team slugs without org prefix
+            const actorTeamsEnv = JSON.parse(process.env.ACTOR_TEAMS || '[]');
+            const actorTeams = actorTeamsEnv.map(t => t.trim()).filter(Boolean).map(team => team.includes('/') ? team.split('/')[1] : team);
 
-            const isApproved = teamsPrefixLess.some(team => process.env.ACTOR_TEAMS.includes(team));
-            if (isApproved) {
-                await github.rest.issues.createComment({
-                  issue_number: context.issue.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: `✅ Terraform apply approved by @${context.actor} (member of @${fullTeamSlug}) for environment: ${process.env.ENVIRONMENT}`
-                });
-                return;
-              }
+            const matchedTeam = actorTeams.find(team => approvedTeams.includes(team));
+            if (matchedTeam) {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `✅ Terraform apply approved by @${context.actor} (member of @${matchedTeam}) for environment: ${process.env.ENVIRONMENT}`
+              });
+              return;
+            }
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,

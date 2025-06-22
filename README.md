@@ -127,7 +127,17 @@ The matching between branch names and target environment is like so:
 For PRs:
 1. The workflow runs and comments the plan on the PR
 2. Review the plan in the PR comments
+   ![pr_tf_plan](docs/images/pr_tf_plan.png)
 3. Comment `/apply` to approve
-4. Only members of the `terraform-approvers` team can approve
+
+   Only members of allowed organization teams can approve.
+
+   Please note that the repository must be owned by an organization.
+
+   ![pr_apply_tf_plan](docs/images/pr_apply_tf_plan.png)
 
 This implementation addresses both issues you identified while maintaining a clean, understandable workflow structure.
+
+#### **Workflow Diagram**
+In case there's a terraform change, the job `s3_sync` runs after `tf_apply`.
+![aws_workflow.png](docs/images/aws_workflow.png)
