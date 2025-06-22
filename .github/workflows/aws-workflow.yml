@@ -256,8 +256,9 @@ jobs:
     steps:
       - name: Comment on issue
         uses: actions/github-script@v6
+        env:
+          RUN_TF: ${{ needs.detect_changes.outputs.run_tf }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const issue = context.payload.issue;
             const commenter = context.actor;
@@ -454,7 +455,6 @@ jobs:
           TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
           PLAN_OUTPUT: ${{ env.PLAN_OUTPUT }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const header = "### Terraform Plan Created";
 
@@ -492,7 +492,6 @@ jobs:
           TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
           PLAN_OUTPUT: ${{ env.PLAN_OUTPUT }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
             const org = context.repo.owner;
@@ -583,9 +582,9 @@ jobs:
         uses: actions/github-script@v6
         env:
           ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
+          TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
 
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const commenter = context.actor;
             const repoOwner = context.repo.owner;
@@ -692,7 +691,6 @@ jobs:
           TF_APPLY_STATUS: ${{ needs.tf_apply.result }}
           ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const commenter = context.actor;
             const repoOwner = context.repo.owner;
@@ -814,5 +812,4 @@ jobs:
               }]
             }
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
