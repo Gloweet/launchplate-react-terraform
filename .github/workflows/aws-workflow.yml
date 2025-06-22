@@ -581,6 +581,7 @@ jobs:
         id: actorTeams
         with:
           username: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check commenter team membership
         uses: actions/github-script@v6
