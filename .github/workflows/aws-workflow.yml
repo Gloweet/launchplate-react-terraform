@@ -214,19 +214,11 @@ jobs:
 
           if [[ "$run_all" == "true" ]]; then
             echo "run_tf=true" | tee -a "$GITHUB_OUTPUT"
-            echo "deploy_tf=true" | tee -a "$GITHUB_OUTPUT"
             echo "run_web=true" | tee -a "$GITHUB_OUTPUT"
             echo "deploy_web=true" | tee -a "$GITHUB_OUTPUT"
           else
             run_tf="${{ steps.filter.outputs.terraform }}"
-            tf_apply="${{ needs.compute_env.outputs.tf_apply }}"
             echo "run_tf=$run_tf" | tee -a "$GITHUB_OUTPUT"
-
-            if [[ "$run_tf" == "true" && "$tf_apply" == "true" ]]; then
-              echo "deploy_tf=true" | tee -a "$GITHUB_OUTPUT"
-            else
-              echo "deploy_tf=false" | tee -a "$GITHUB_OUTPUT"
-            fi
 
             run_web="${{ steps.filter.outputs.web }}"
             branch_filter_valid="${{ needs.compute_env.outputs.branch_filter_valid }}"
@@ -243,6 +235,14 @@ jobs:
             else
               echo "deploy_web=false" | tee -a "$GITHUB_OUTPUT"
             fi
+          fi
+
+          tf_apply="${{ needs.compute_env.outputs.tf_apply }}"
+
+          if [[ "$run_tf" == "true" && "$tf_apply" == "true" ]]; then
+            echo "deploy_tf=true" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "deploy_tf=false" | tee -a "$GITHUB_OUTPUT"
           fi
 
   tf_applying:
@@ -536,7 +536,7 @@ jobs:
       # When manual approval is required (on workflow_dispatch and push):
       # Create an annotation to notify the user on the TF plan and how to apply it
       - name: Generate Terraform Plan Output
-        if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.detect_changes.outputs.deploy_tf == 'true' }}
+        if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.detect_changes.outputs.deploy_tf == 'false' }}
 
         run: |
           cd ${{ env.working_dir_tf }}
@@ -546,10 +546,9 @@ jobs:
           echo "EOF" >> $GITHUB_ENV
 
       - name: Create Workflow Run Annotation for Manual Approval
-        if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.detect_changes.outputs.deploy_tf == 'true' }}
+        if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'push') && needs.detect_changes.outputs.deploy_tf == 'false' }}
 
         run: |
-          # Create a summary of the plan using a more reliable method
           PLAN_SUMMARY=$(echo "$PLAN_OUTPUT" | grep -E 'Plan:|No changes' || echo "Plan: unknown")
           # Handle empty plan output
           if [ -z "$PLAN_OUTPUT" ]; then
@@ -557,11 +556,11 @@ jobs:
           fi
 
           # Create the annotation with plan details
-          echo "::notice title=Manual Approval Required::Terraform plan created for environment '${{ needs.detect_changes.outputs.environment }}'. Plan summary: $PLAN_SUMMARY. To apply, run this workflow again with auto_apply=true."
+          echo "::notice title=Manual Approval Required::Terraform plan created for environment '${{ needs.detect_changes.outputs.environment }}'. Plan summary: $PLAN_SUMMARY. To apply, run this workflow again with the option **Apply Terraform changes automatically** enabled."
 
           # Write full plan to step summary
           echo "## Terraform Plan for environment: ${{ needs.detect_changes.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "To apply this plan, run the workflow again with auto_apply=true" >> $GITHUB_STEP_SUMMARY
+          echo "To apply this plan, run the workflow again with **Apply Terraform changes automatically**" >> $GITHUB_STEP_SUMMARY
           echo '```terraform' >> $GITHUB_STEP_SUMMARY
           echo "$PLAN_OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
@@ -786,9 +785,9 @@ jobs:
                 ${process.env.AS_AUTHOR} deployed ${process.env.AS_REPO}@${process.env.AS_REF} (${process.env.AS_COMMIT}) in ${process.env.AS_TOOK}
 
                 *Environment:* ${{ needs.detect_changes.outputs.environment }}${
-                  '${{ needs.detect_changes.outputs.tf_deploy }}' ? `\n*Terraform Deployed:* ${{ needs.detect_changes.outputs.tf_deploy }}` : ''
+                  '${{ needs.detect_changes.outputs.deploy_tf }}' ? `\n*Terraform Deployed:* ${{ needs.detect_changes.outputs.deploy_tf }}` : ''
                 }${
-                  '${{ needs.detect_changes.outputs.web_deploy }}' ? `\n*S3 Synced:* ${{ needs.detect_changes.outputs.web_deploy }}` : ''
+                  '${{ needs.detect_changes.outputs.deploy_web }}' ? `\n*S3 Synced:* ${{ needs.detect_changes.outputs.deploy_web }}` : ''
                 }`
               }]
             }
