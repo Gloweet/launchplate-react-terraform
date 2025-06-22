@@ -201,25 +201,33 @@ jobs:
             web:
               - 'web/**'
 
-      - name: Set and dump job conditions
+      - name: Set job conditions
         id: set-job-conditions
         run: |
           echo "Evaluating and exporting outputs..."
 
-          run_all=${{ github.event_name == 'workflow_dispatch' }}
+          # Convert conditions to numbers (1 or 0)
+          filter_tf_num=$([[ '${{ steps.filter.outputs.terraform }}' == 'true' ]] && echo 1 || echo 0)
+          filter_web_num=$([[ '${{ steps.filter.outputs.web }}' == 'true' ]] && echo 1 || echo 0)
+          branch_valid_num=$([[ '${{ needs.compute_env.outputs.branch_filter_valid }}' == 'true' ]] && echo 1 || echo 0)
+          tf_apply_num=$([[ '${{ needs.compute_env.outputs.tf_apply }}' == 'true' ]] && echo 1 || echo 0)
+          run_all=$([[ "${{ github.event_name }}" == "workflow_dispatch" ]] && echo 1 || echo 0)
 
+          # Compute job conditions
           echo "run_all=$run_all" | tee -a $GITHUB_OUTPUT
 
-          echo "run_tf=$(( $run_all || '${{ steps.filter.outputs.terraform }}' == 'true' ))" | tee -a $GITHUB_OUTPUT
+          echo "run_tf=$(( $run_all || $filter_tf_num ))" | tee -a $GITHUB_OUTPUT
 
-          echo "deploy_tf=$(( ($run_all || '${{ steps.filter.outputs.terraform }}' == 'true') && '${{ needs.compute_env.outputs.tf_apply }}' == 'true' ))" | tee -a $GITHUB_OUTPUT
+          echo "deploy_tf=$(( ($run_all || $filter_tf_num) && $tf_apply_num ))" | tee -a $GITHUB_OUTPUT
 
-          echo "run_web=$(( $run_all || '${{ steps.filter.outputs.web }}' == 'true' ))" | tee -a $GITHUB_OUTPUT
+          echo "run_web=$(( $run_all || $filter_web_num ))" | tee -a $GITHUB_OUTPUT
 
+          not_pr_num=$([[ '${{ github.event_name }}' != 'pull_request' ]] && echo 1 || echo 0)
+          pr_merged_num=$([[ '${{ github.event.pull_request.merged }}' == 'true' ]] && echo 1 || echo 0)
           echo "deploy_web=$((
-            ($run_all || '${{ steps.filter.outputs.web }}' == 'true') &&
-            '${{ needs.compute_env.outputs.branch_filter_valid }}' == 'true' &&
-            ('${{ github.event_name }}' != 'pull_request' || '${{ github.event.pull_request.merged }}' == 'true')
+            ($run_all || $filter_web_num) &&
+            $branch_valid_num &&
+            ($not_pr_num || $pr_merged_num)
           ))" | tee -a $GITHUB_OUTPUT
 
   tf_checks:
