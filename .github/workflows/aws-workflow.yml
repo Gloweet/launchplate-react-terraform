@@ -786,7 +786,7 @@ jobs:
 
   slack:
     name: Slack
-    needs: [detect_changes, s3_sync, tf_apply, tf_apply_notification]
+    needs: [detect_changes, s3_sync, tf_apply_notification]
     if: always()
     runs-on: ubuntu-latest
 
