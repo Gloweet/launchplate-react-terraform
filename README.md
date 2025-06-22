@@ -108,6 +108,19 @@ It requires manual approval:
 - On **pull request**, the workflow creates a GitHub issue with the Terraform plan. When answering `/apply`, only members of the `terraform-approvers` team can approve.
 - On **workflow_dispatch** with the **"Auto Apply"** option enabled, the workflow will automatically apply the changes without requiring manual approval.
 
+#### **Workflow Dispatch**
+
+Members of the allowed organization teams can trigger the workflow manually through the GitHub Actions UI.
+
+1. Go to Actions > AWS multi-env deployment
+2. On the top right, click on **Run Workflow**
+3. Select the environment and click **Run Workflow**
+4. After running the workflow, check the terraform plan in the **Action details**.
+![Annotation](docs/images/workflow_dispatch_approval_required.png)
+
+5. Re-run the workflow with the **Apply Terraform changes automatically** option enabled to apply the changes automatically.
+![Workflow Dispatch](docs/images/workflow_dispatch.png)
+
 #### **Automatic Deployment**
 
 On push, the workflow will automatically:

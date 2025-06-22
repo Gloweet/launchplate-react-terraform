@@ -556,11 +556,11 @@ jobs:
           fi
 
           # Create the annotation with plan details
-          echo "::notice title=Manual Approval Required::Terraform plan created for environment '${{ needs.detect_changes.outputs.environment }}'. Plan summary: $PLAN_SUMMARY. To apply, run this workflow again with the option **Apply Terraform changes automatically** enabled."
+          echo "::notice title=Manual Approval Required::Terraform plan created for environment '${{ needs.detect_changes.outputs.environment }}'. Plan summary: $PLAN_SUMMARY. To apply, run this workflow again with the option '**Apply Terraform changes automatically**' enabled."
 
           # Write full plan to step summary
           echo "## Terraform Plan for environment: ${{ needs.detect_changes.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
-          echo "To apply this plan, run the workflow again with **Apply Terraform changes automatically**" >> $GITHUB_STEP_SUMMARY
+          echo "To apply this plan, run the workflow again with the option '**Apply Terraform changes automatically**' enabled." >> $GITHUB_STEP_SUMMARY
           echo '```terraform' >> $GITHUB_STEP_SUMMARY
           echo "$PLAN_OUTPUT" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
