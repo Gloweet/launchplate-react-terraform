@@ -87,10 +87,10 @@ jobs:
 
           EVENT_NAME="${{ github.event_name }}"
           REF_NAME="${{ github.ref_name }}"
+          PR_BASE_REF="${{ github.event.pull_request.base.ref }}"
           COMMENT_BODY="${{ github.event.comment.body }}"
           EVENT_INPUT_ENV="${{ github.event.inputs.environment }}"
           EVENT_INPUT_APPLY="${{ github.event.inputs.tf_apply }}"
-          PR_BASE_REF="${{ github.event.pull_request.base.ref }}"
 
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             ENVIRONMENT="$EVENT_INPUT_ENV"
@@ -156,6 +156,12 @@ jobs:
       deploy_web: ${{ steps.set-job-conditions.outputs.deploy_web }}
 
     steps:
+      # On issue event (from Github Issues or PR comments),
+      # retrieve the PR branch
+      - uses: xt0rted/pull-request-comment-branch@v3
+        if: github.event_name == 'issue_comment'
+        id: comment-branch
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -166,14 +172,12 @@ jobs:
         run: |
           echo "event_name=${{ github.event_name }}" >> "$GITHUB_OUTPUT"
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "base_ref=origin/${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+            echo "base_ref=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
+            echo "base_ref=${{ steps.comment-branch.outputs.head_ref }}" >> "$GITHUB_OUTPUT"
           else
             echo "base_ref=''" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Fetch base branch (only needed for PRs)
-        if: steps.vars.outputs.event_name == 'pull_request'
-        run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
 
       - name: Check for changes based on base branch
         id: filter
@@ -426,9 +430,9 @@ jobs:
             </details>
 
             Please review the plan and comment:
-            - \`/apply\` to apply these changes (only members of the \`${teamNames}\` team(s) can approve)
+            - \`/apply\` to apply these changes (only members of the ${teamNames} team(s) can approve)
 
-            **Notes:** Only members of the \`${teamNames}\` team(s) can approve and trigger the apply.`;
+            **Notes:** Only members of the ${teamNames} team(s) can approve and trigger the apply.`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
