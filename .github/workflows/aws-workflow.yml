@@ -176,8 +176,8 @@ jobs:
             echo "base_ref=origin/${{ github.event.pull_request.base.ref }}" >> "$GITHUB_OUTPUT"
             echo "head_ref=origin/${{ github.head_ref }}" >> "$GITHUB_OUTPUT"
           elif [[ "${{ github.event_name }}" == "issue_comment" ]]; then
-            echo "base_ref=origin/${{ steps.comment-branch.outputs.base_ref }}" >> "$GITHUB_OUTPUT"
-            echo "head_ref=origin/${{ steps.comment-branch.outputs.head_ref }}" >> "$GITHUB_OUTPUT"
+            echo "base_ref=${{ steps.comment-branch.outputs.base_ref }}" >> "$GITHUB_OUTPUT"
+            echo "head_ref=${{ steps.comment-branch.outputs.head_ref }}" >> "$GITHUB_OUTPUT"
           else
             echo "base_ref=origin/${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
             echo "head_ref=HEAD" >> "$GITHUB_OUTPUT"
