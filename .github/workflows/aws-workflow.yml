@@ -246,7 +246,7 @@ jobs:
     name: Comment when starting applying Terraform
     runs-on: ubuntu-latest
     needs: [compute_env, detect_changes]
-    if: ${{ github.event_name == "issue_comment" && needs.compute_env.outputs.branch_filter_valid == 'true'  && needs.compute_env.outputs.tf_apply == 'true' }}
+    if: ${{ github.event_name == 'issue_comment' && needs.compute_env.outputs.branch_filter_valid == 'true'  && needs.compute_env.outputs.tf_apply == 'true' }}
 
     steps:
       - name: Comment on issue
