@@ -441,6 +441,44 @@ jobs:
           path: ${{ env.working_dir_tf }}/tfplan
           retention-days: 5
 
+      - name: Delete Previous Summary Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        env:
+          TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
+          PLAN_OUTPUT: ${{ env.PLAN_OUTPUT }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const header = "### Terraform Plan Created";
+
+            // Find existing plan comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            // Dump comments
+            console.log(JSON.stringify(comments.data, null, 2));
+
+            const previousComment = comments.data.find(c =>
+              c.user.type === 'Bot' &&
+              c.body.startsWith(header)
+            );
+
+            // Dump previous comment
+            console.log(JSON.stringify(previousComment, null, 2));
+
+            // Delete the old comment if found
+            if (previousComment) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: previousComment.id
+              });
+            }
+
       - name: Create Plan Summary Comment
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v6
@@ -481,27 +519,6 @@ jobs:
             - \`/apply\` to apply these changes (only members of the ${teamNames} team(s) can approve)
 
             **Notes:** Only members of the ${teamNames} team(s) can approve and trigger the apply.`;
-
-            // Find existing plan comment
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number
-            });
-
-            const previousComment = comments.data.find(c =>
-              c.user.type === 'Bot' &&
-              c.body.startsWith(header)
-            );
-
-            // Delete the old comment if found
-            if (previousComment) {
-              await github.rest.issues.deleteComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: previousComment.id
-              });
-            }
 
             // Post the new comment
             await github.rest.issues.createComment({
