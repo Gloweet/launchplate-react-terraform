@@ -1,5 +1,8 @@
 name: AWS multi-env deployment
 
+# Ref:
+# github-script context: https://github.com/actions/toolkit/blob/main/packages/github/src/context.ts
+
 permissions:
   # Allows the workflow to request an OIDC token
   id-token: write
@@ -242,15 +245,25 @@ jobs:
             fi
           fi
 
+<<<<<<< HEAD
   applying_tf:
     name: Comment when starting applying Terraform
     runs-on: ubuntu-latest
     needs: [compute_env, detect_changes]
+=======
+  tf_applying:
+    name: Comment on /apply
+    runs-on: ubuntu-latest
+    needs: [compute_env, detect_changes]
+    env:
+      RUN_TF: ${{ needs.detect_changes.outputs.run_tf }}
+>>>>>>> origin/main
     if: ${{ github.event_name == 'issue_comment' && needs.compute_env.outputs.branch_filter_valid == 'true'  && needs.compute_env.outputs.tf_apply == 'true' }}
 
     steps:
       - name: Comment on issue
         uses: actions/github-script@v6
+<<<<<<< HEAD
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -261,6 +274,20 @@ jobs:
               comment = 'Starting Terraform apply...';
             } else {
               comment = 'Skipping Terraform apply as no changes detected.';
+=======
+        env:
+          RUN_TF: ${{ needs.detect_changes.outputs.run_tf }}
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const commenter = context.actor;
+
+            let comment;
+            if (process.env.RUN_TF == 'true') {
+              comment = `ℹ️ Terraform apply requested by @${commenter}...`;
+            } else {
+              comment = '🟡 Skipping Terraform apply as no changes detected.\n\nRequested by @${commenter}';
+>>>>>>> origin/main
             }
 
             await github.rest.issues.createComment({
@@ -448,7 +475,10 @@ jobs:
           TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
           PLAN_OUTPUT: ${{ env.PLAN_OUTPUT }}
         with:
+<<<<<<< HEAD
           github-token: ${{ secrets.GITHUB_TOKEN }}
+=======
+>>>>>>> origin/main
           script: |
             const header = "### Terraform Plan Created";
 
@@ -486,7 +516,6 @@ jobs:
           TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
           PLAN_OUTPUT: ${{ env.PLAN_OUTPUT }}
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
             const org = context.repo.owner;
@@ -572,14 +601,28 @@ jobs:
     if: needs.detect_changes.outputs.deploy_tf == 'true'
 
     steps:
+<<<<<<< HEAD
       - name: Check commenter team membership
         if: github.event_name == 'issue_comment'
         uses: actions/github-script@v6
         env:
           TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
+=======
+      - uses: tspascoal/get-user-teams-membership@v3
+        id: actorTeams
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ github.actor }}
+
+      - name: Check commenter team membership
+        uses: actions/github-script@v6
+        env:
+          ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
+          TERRAFORM_APPROVERS: ${{ vars.TERRAFORM_APPROVERS }}
+          ACTOR_TEAMS: ${{ steps.actorTeams.outputs.teams }}
+>>>>>>> origin/main
+        with:
           script: |
+<<<<<<< HEAD
             const environment = needs.detect_changes.outputs.environment;
             const commenter = context.payload.comment.user.login;
 
@@ -623,14 +666,28 @@ jobs:
               }
 
               if (!isApproved) {
+=======
+            // Retrieve array of team slugs without org prefix
+            const approversEnv = JSON.parse(process.env.TERRAFORM_APPROVERS || '[]');
+            const teamsRaw = approversEnv.map(t => t.trim()).filter(Boolean);
+            const teamsPrefixLess = teamsRaw.map(team => team.includes('/') ? team.split('/')[1] : team);
+
+            const isApproved = teamsPrefixLess.some(team => process.env.ACTOR_TEAMS.includes(team));
+            if (isApproved) {
+>>>>>>> origin/main
                 await github.rest.issues.createComment({
                   issue_number: context.issue.number,
                   owner: context.repo.owner,
                   repo: context.repo.repo,
+<<<<<<< HEAD
                   body: `❌ @${commenter} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
+=======
+                  body: `✅ Terraform apply approved by @${context.actor} (member of @${fullTeamSlug}) for environment: ${process.env.ENVIRONMENT}`
+>>>>>>> origin/main
                 });
-                core.setFailed('Commenter is not in an approved team');
+                return;
               }
+<<<<<<< HEAD
             } catch (error) {
               console.error('Error checking team membership:', error);
               await github.rest.issues.createComment({
@@ -641,6 +698,16 @@ jobs:
               });
               core.setFailed(`Error checking team membership: ${error.message}`);
             }
+=======
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `❌ @${context.actor} is not authorized to approve Terraform apply. Must be a member of one of these teams: ${teams.map(t => '@' + t).join(', ')}`
+            });
+            throw new Error('Commenter is not in an approved team');
+>>>>>>> origin/main
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -682,6 +749,50 @@ jobs:
           cd ${{ env.working_dir_tf }}
           terraform apply -auto-approve tfplan
 
+  tf_apply_notification:
+    name: Notify Terraform Apply Status
+    runs-on: ubuntu-latest
+    needs: [detect_changes, tf_apply]
+    if: always() && needs.tf_apply.result != 'skipped'
+    steps:
+      - name: Comment on PR or Issue
+        uses: actions/github-script@v6
+        env:
+          TF_APPLY_STATUS: ${{ needs.tf_apply.result }}
+          ENVIRONMENT: ${{ needs.detect_changes.outputs.environment }}
+        with:
+          script: |
+            const commenter = context.actor;
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+            let issueNumber = context.issue.number;
+
+            let commentBody = '';
+
+            switch (process.env.TF_APPLY_STATUS) {
+              case 'success':
+                commentBody = `🟢 Terraform successfully applied for environment: ${process.env.ENVIRONMENT}\n\nRequested by @${commenter}.`;
+                break;
+              case 'failure':
+                commentBody = `🔴 Terraform failed to be applied for environment: ${process.env.ENVIRONMENT}\n\nRequested by @${commenter}.`;
+                break;
+              default:
+                commentBody = `🟡 The Terraform apply job ended with the status ${process.env.TF_APPLY_STATUS} for environment: ${process.env.ENVIRONMENT}\n\nRequested by @${commenter}.`;
+                break;
+            }
+
+            try {
+              await github.rest.issues.createComment({
+                issue_number: issueNumber,
+                owner: repoOwner,
+                repo: repoName,
+                body: commentBody
+              });
+              console.log("Comment posted successfully");
+            } catch (error) {
+              console.error(`Error posting comment: ${error.message}`);
+            }
+
   terraform_dependency:
     name: Terraform Dependency Check
     needs: [detect_changes]
@@ -695,7 +806,14 @@ jobs:
   s3_sync:
     name: Web Sync to S3
     needs:
-      [web_build, compute_env, detect_changes, terraform_dependency, tf_apply]
+      [
+        web_build,
+        compute_env,
+        detect_changes,
+        terraform_dependency,
+        tf_apply,
+        tf_apply_notification,
+      ]
     if: |
       needs.detect_changes.outputs.deploy_web == 'true' &&
       (needs.tf_apply.result == 'success' || needs.tf_apply.result == 'skipped')
@@ -738,7 +856,7 @@ jobs:
 
   slack:
     name: Slack
-    needs: [detect_changes, s3_sync, tf_apply]
+    needs: [detect_changes, s3_sync, tf_apply_notification]
     if: always()
     runs-on: ubuntu-latest
 
@@ -764,5 +882,4 @@ jobs:
               }]
             }
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
