@@ -234,7 +234,7 @@ jobs:
     name: TF Checks
     runs-on: ubuntu-latest
     needs: [detect_changes]
-    if: needs.detect_changes.outputs.run_tf == 'true'
+    if: needs.detect_changes.outputs.run_tf
 
     steps:
       - name: Checkout repository
@@ -305,7 +305,7 @@ jobs:
     name: Web Build
     runs-on: ubuntu-latest
     needs: [detect_changes]
-    if: needs.detect_changes.outputs.run_web == 'true'
+    if: needs.detect_changes.outputs.run_web
     outputs:
       app_version: ${{ steps.get_version.outputs.app_version }}
 
@@ -501,7 +501,7 @@ jobs:
     name: TF Apply
     runs-on: ubuntu-latest
     needs: [detect_changes, tf_plan]
-    if: needs.detect_changes.outputs.deploy_tf == 'true'
+    if: needs.detect_changes.outputs.deploy_tf
 
     steps:
       - name: Check commenter team membership
@@ -617,7 +617,7 @@ jobs:
   terraform_dependency:
     name: Terraform Dependency Check
     needs: [detect_changes]
-    if: needs.detect_changes.outputs.deploy_tf == 'true'
+    if: needs.detect_changes.outputs.deploy_tf
     runs-on: ubuntu-latest
     steps:
       - run: echo "This job exists to create a dependency for s3_sync when terraform changes are detected"
@@ -629,7 +629,7 @@ jobs:
     needs:
       [web_build, compute_env, detect_changes, terraform_dependency, tf_apply]
     if: |
-      needs.detect_changes.outputs.deploy_web == 'true' &&
+      needs.detect_changes.outputs.deploy_web &&
       (needs.tf_apply.result == 'success' || needs.tf_apply.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
