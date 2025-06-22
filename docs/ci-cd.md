@@ -95,9 +95,19 @@ aws iam attach-role-policy --role-name ReactLaunchplateGitHubActionsOIDCRole --p
 
 ### 3. GitHub Repository Secrets
 
-Set the following GitHub repository secrets:
+1. See the Github repository variables & secrets to set in [.auto.tfvars.example](../terraform/bootstrap-github/.auto.tfvars.example).
+2. Copy-paste the contents of [.auto.tfvars.example](../terraform/bootstrap-github/.auto.tfvars.example) into your own `.auto.tfvars` file.
+3. Run `terraform init` to initialize the Terraform workspace.
+4. Run `terraform apply` to push the variables and secrets to your Github repository.
 
-- `AWS_ROLE_ARN`: The ARN of the IAM role created above, equal to `arn:aws:iam::<AWS_ACCOUNT_ID>:role/ReactLaunchplateGitHubActionsOIDCRole`
+To access the teams of the organization members, you need to create a PAT with the read:org scope.
+1. Go to your Github account settings.
+2. Click on "Developer settings".
+3. Click on "Personal access tokens".
+4. Click on "Tokens (classic)".
+5. Click on "Generate new token".
+6. Give the token a name and select the "read:org" scope.
+7. Click on "Generate token".
 
 ## Passing Secrets to Terraform
 

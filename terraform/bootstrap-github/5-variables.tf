@@ -17,6 +17,18 @@ variable "repository_name" {
   default     = "launchplate-react"
 }
 
+variable "org_token" {
+  description = "GitHub personal access token with organization permissions"
+  type        = string
+  sensitive   = true
+}
+
+variable "terraform_approvers" {
+  description = "List of GitHub usernames who can approve Terraform changes"
+  type        = list(string)
+  default     = ["terraform-approvers"]
+}
+
 variable "slack_webhook_url" {
   description = "Slack webhook URL for notifications"
   type        = string
