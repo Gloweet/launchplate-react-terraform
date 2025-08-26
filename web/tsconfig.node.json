@@ -12,5 +12,5 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["_config.ts", "vite.config.ts", "./package.json", "utils/sitemap.ts"]
+  "include": ["_config.ts", "vite.config.mts", "./package.json", "utils/sitemap.ts"]
 }

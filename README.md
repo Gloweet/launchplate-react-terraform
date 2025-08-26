@@ -8,6 +8,9 @@ A React application deployed to AWS using Terraform with multiple environment su
 - **SSL Certificates**: AWS ACM with DNS validation
 - **Redirect from root to www**: Enabled by default when using Cloudflare, based on Page Rules. This feature isn't supported when using Route53.
 
+![Launchplate React](./docs/images/home_page.png)
+
+
 ```
 ├── .github/
 │   ├── actions/          # Custom GitHub Actions
@@ -16,7 +19,7 @@ A React application deployed to AWS using Terraform with multiple environment su
 │   ├── live              # Workspace-CLI environments
 │   ├── modules/          # Reusable Terraform modules
 │   └── bootstrap/        # Bootstrap shared TF state
-└── web/                      # React application source code
+└── web/                   # React application source code
 ```
 
 Make a table with three rows (production, staging, development) with two columns (root url redirected to www, www url)
@@ -25,7 +28,6 @@ Make a table with three rows (production, staging, development) with two columns
 |-------------|---------------------------|---------|
 | Production  | [launchplate-react.gloweet.com](https://launchplate-react.gloweet.com)                       | [www.launchplate-react.gloweet.com](https://www.launchplate-react.gloweet.com) |
 | Staging     | [stg-launchplate-react.gloweet.com](https://stg-launchplate-react.gloweet.com)                       | [www.stg-launchplate-react.gloweet.com](https://www.stg-launchplate-react.gloweet.com) |
-| Development | [dev-launchplate-react.gloweet.com](https://dev-launchplate-react.gloweet.com)                       | [www.dev-launchplate-react.gloweet.com](https://www.dev-launchplate-react.gloweet.com) |
 
 ## Documentation
 - [Infrastructure and CI/CD pipeline setup](/terraform/README.md)
@@ -43,6 +45,7 @@ Make a table with three rows (production, staging, development) with two columns
 2. **Install dependencies**
 
    ```bash
+   cd web
    pnpm install
    ```
 
@@ -77,12 +80,11 @@ cd terraform/live
 terraform init
 
 # Initialize Workspaces
-terraform workspace new dev
 terraform workspace new stg
 terraform workspace new prod
 terraform workspace list
 
-terraform workspace select dev
+terraform workspace select stg
 
 # Plan changes
 terraform plan
@@ -133,7 +135,6 @@ The matching between branch names and target environment is like so:
 |---------------|--------------------|
 | main          | prod               |
 | staging       | stg                |
-| development   | dev                |
 
 #### **Pull Request Flow**
 

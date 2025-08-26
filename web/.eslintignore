@@ -38,5 +38,5 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-vite.config.ts
+vite.config.mts
 vite-environment.d.ts

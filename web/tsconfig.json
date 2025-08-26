@@ -29,7 +29,7 @@
     "**/*.mjs",
     "utils",
     "playwright.config.ts",
-    "vite.config.ts",
+    "vite.config.mts",
     "vitest.config.ts",
     ".betterer.ts",
     "dist-server/server.ts",

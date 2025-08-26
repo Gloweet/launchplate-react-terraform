@@ -1,49 +1,14 @@
 {
-  "private": true,
-  "version": "1.0.0",
-  "license": "MIT",
-  "type": "module",
-  "author": {
-    "name": "Antonin Marxer",
-    "email": "marxer.antonin@gmail.com",
-    "url": "https://antoninmarxer.com"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/PheonBest/vite-react-ts-shadcn-ui-ci-cd-devbox"
-  },
-  "issues": {
-    "url": "https://github.com/PheonBest/vite-react-ts-shadcn-ui-ci-cd-devbox/issues"
-  },
-  "homepage": "/launchplate-react",
   "scripts": {
-    "prepare": "cd .. && husky install front/.husky",
-    "postinstall": "husky & playwright install",
-    "routes:watch": "tsr watch",
-    "routes:generate": "tsr generate",
     "dev": "vite",
-    "preview": "vite preview",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "lint:staged": "lint-staged",
-    "format": "prettier . --check",
-    "format:fix": "prettier . --write",
-    "test": "vitest --coverage --config vitest.config.ts",
-    "test:e2e": "cross-env VITE_COVERAGE=true playwright test",
-    "test:watch": "vitest --watch --config vitest.config.ts",
-    "test:ui": "playwright test --ui",
+    "start": "vite start",
     "build:prod": "vite build --mode prod",
     "build:stg": "vite build --mode stg",
     "build:dev": "vite build --mode dev",
     "build": "vite build --mode prod",
-    "commit": "git-cz",
-    "betterer": "betterer",
-    "betterer:watch": "betterer --watch",
-    "betterer:ci": "betterer ci",
-    "serve": "tsx dist-server/server.ts",
-    "aws:sync:prod": "aws s3 sync dist s3://prod-launchplate-react-primary && aws s3 sync dist s3://prod-launchplate-react-failover && aws cloudfront create-invalidation --distribution-id E3N4DALZWT4TPP --paths '/*'",
-    "aws:sync:stg": "aws s3 sync dist s3://stg-launchplate-react-primary && aws cloudfront create-invalidation --distribution-id E2Y98Y110EI3ZG --paths '/*'",
-    "aws:sync:dev": "aws s3 sync dist s3://dev-launchplate-react-primary && aws cloudfront create-invalidation --distribution-id EADOQEBZ16OEM --paths '/*'"
+    "sync:prod": "npm run build:prod && aws s3 sync dist s3://prod-launchplate-react-primary && aws cloudfront create-invalidation --distribution-id XXXX1 --paths '/*'",
+    "sync:stg": "aws s3 sync dist s3://stg-launchplate-react-primary && aws cloudfront create-invalidation --distribution-id XXXX2 --paths '/*'",
+    "sync:dev": "aws s3 sync dist s3://dev-launchplate-react-primary && aws cloudfront create-invalidation --distribution-id XXXX3 --paths '/*'"
   },
   "config": {
     "commitizen": {
